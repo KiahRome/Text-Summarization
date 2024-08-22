@@ -26,7 +26,9 @@ def toggle_About(e):
 # ~ ~ ~
 def toggle_Summarizer():
     # The delay of button animation is intended by using .after() method
-    summarizer = Button(simu, text='Summarize', borderwidth=2, state='normal', background='antiquewhite', width=12, height=2, activebackground='antiquewhite4', activeforeground="white", font=('Calibri Bold', 9), cursor='hand2', command=lambda: results.after(1000,toggle_Results()))
+    # remove results.after() method if needed for faster testing, or turn the seconds(500ms) lower
+    summarizer = Button(simu, text='Summarize', borderwidth=2, state='normal', background='antiquewhite', width=12, height=2, activebackground='antiquewhite4', activeforeground="white", font=('Calibri Bold', 9), cursor='hand2', command=lambda: results.after(500,toggle_Results()))
+    # command=toggle_Results() <-- no results.after() method
     # summarizer.bind('<Button-1>', toggle_Results)
     summarizer.place(relx=0.78, rely=0.05, anchor=NE)
 # ~ ~ ~
@@ -38,7 +40,7 @@ def toggle_Results():
 def toggle_tabResults():
     global result
     if result:
-        resultsWindow.place(relx=0.99, rely=0.9, anchor=SE)
+        resultsWindow.place(anchor=SE, relx=0.98, rely=0.9)
     else:
         resultsWindow.place_forget()
     result = not result
@@ -71,9 +73,9 @@ show = True
 result = True
 chosenFile = 'No chosen file'
 filename = ''
-fileContent = 'This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the fileThis is the content of the file This is the content of the file This is the content of the file This is the content of the file'
-xstAlgoContent = 'Results based on the existing algorithm  Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm'
-newAlgoContent = 'Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm'
+fileContent = 'The length of this string is for testing purposes only (placeholder) This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the file This is the content of the fileThis is the content of the file This is the content of the file This is the content of the file This is the content of the file'
+xstAlgoContent = 'The length of this string is for testing purposes only (placeholder) Results based on the existing algorithm  Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm Results based on the existing algorithm'
+newAlgoContent = 'The length of this string is for testing purposes only (placeholder) Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm Results based on the new algorithm'
 
 # Shorten filename displayed if too long
 if (len(chosenFile) > 20):
@@ -191,13 +193,18 @@ group_Members.pack()
 
 # ~ ~ ~
 # Results Window
-resultsWindow = Frame(simu, background='whitesmoke', bd=5, relief='ridge', visual='best', pady=15, padx=15)
-Label(resultsWindow, background='whitesmoke', text="Statistics", font=('Times New Roman Bold', 13), wraplength=screenWidth * 0.35).pack()
+resultsWindow = Canvas(simu, background='whitesmoke', borderwidth=5, relief='ridge', width=screenWidth * 0.4, height=screenHeight * 0.6)
+resultsWindowFrame = Frame(resultsWindow)
+Label(resultsWindowFrame, background='whitesmoke', text="Statistics", font=('Times New Roman Bold', 13), wraplength=screenWidth * 0.35).pack()
 
-Label(resultsWindow, background='whitesmoke', text="Relatedness", font=('Times New Roman Normal', 11), wraplength=screenWidth * 0.35, justify='left', pady=30).pack()
+Label(resultsWindowFrame, background='whitesmoke', text="Relatedness", font=('Times New Roman Normal', 11), wraplength=screenWidth * 0.35, justify='left', pady=30).pack()
+# will add Label() text for the grade
 
-Label(resultsWindow, background='whitesmoke', text="Accuracy", font=('Times New Roman Normal', 11), wraplength=screenWidth * 0.35, justify='left', pady=30).pack()
+Label(resultsWindowFrame, background='whitesmoke', text="Accuracy", font=('Times New Roman Normal', 11), wraplength=screenWidth * 0.35, justify='left', pady=30).pack()
+# will add Label() text for the grade
 
+# can add more details/ information for the results of the text summarization
 
+resultsWindowFrame.place(anchor=NW, relx=0.05, rely=0.075)
 # Run
 simu.mainloop()
