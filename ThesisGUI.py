@@ -1,5 +1,23 @@
 from tkinter import *
 from tkinter import filedialog
+from docx import Document
+import nltk
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk import FreqDist
+from collections import defaultdict
+
+# Ensure NLTK resources are available
+nltk.data.path.append('C:/Users/Ronan/nltk_data')
+try:
+    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('taggers/averaged_perceptron_tagger')
+    nltk.data.find('chunkers/maxent_ne_chunker')
+except LookupError:
+    print("Required NLTK resources are missing. Downloading...")
+    nltk.download('punkt', download_dir='C:/Users/Ronan/nltk_data')
+    nltk.download('averaged_perceptron_tagger', download_dir='C:/Users/Ronan/nltk_data')
+    nltk.download('maxent_ne_chunker', download_dir='C:/Users/Ronan/nltk_data')
+    nltk.download('words', download_dir='C:/Users/Ronan/nltk_data')
 
 class MainApp(Tk):
     def __init__(self):
@@ -8,9 +26,9 @@ class MainApp(Tk):
         self.result = True
         self.chosenFile = 'No chosen file'
         self.filename = ''
-        self.fileContent = 'The length of this string is for testing purposes only (placeholder) This is the content of the file ...'
-        self.xstAlgoContent = 'The length of this string is for testing purposes only (placeholder) Results based on the existing algorithm ...'
-        self.newAlgoContent = 'The length of this string is for testing purposes only (placeholder) Results based on the new algorithm ...'
+        self.fileContent = ''
+        self.xstAlgoContent = 'Placeholder for existing algorithm results.'
+        self.newAlgoContent = 'Placeholder for new algorithm results.'
         self.create_widgets()
 
     def create_widgets(self):
@@ -23,7 +41,12 @@ class MainApp(Tk):
         self.screenWidth = self.winfo_screenwidth()
         self.screenHeight = self.winfo_screenheight()
         self.geometry('%dx%d' % (self.screenWidth * 0.95, self.screenHeight * 0.9))
-        Frame(self, background='antiquewhite').pack(fill=BOTH, expand=True)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=2)
+        self.grid_columnconfigure(2, weight=2)
+        self.grid_rowconfigure(0, weight=0)
+        self.grid_rowconfigure(1, weight=1)
+        Frame(self, background='antiquewhite').grid(row=0, column=0, columnspan=3, sticky='nsew')
 
     def create_header(self):
         try:
@@ -32,32 +55,32 @@ class MainApp(Tk):
             self.caladiaoPic = PhotoImage(file='./player-spaceship.png').subsample(15, 14)
         except TclError as e:
             print("Error loading image:", e)
-            self.tenioPic = self.bajePic = self.caladiaoPic = None  # Or provide a placeholder image
+            self.tenioPic = self.bajePic = self.caladiaoPic = None
 
-        Label(self, text="Designing An Adaptive Dynamic Approach Applied in Text Summarization",
-              font=('Slussen Mono Black', 15), background='antiquewhite', width=50,
-              wraplength=self.screenWidth * 0.45).place(relx=0, rely=0.01, anchor=NW)
+        header_frame = Frame(self, background='antiquewhite')
+        header_frame.grid(row=0, column=0, columnspan=3, sticky='ew')
 
-        self.summarizer = Button(self, text='Summarize', borderwidth=2, state='disabled', background='antiquewhite',
-                                 width=12, height=2, activebackground='antiquewhite4', activeforeground="white",
-                                 disabledforeground='bisque2', font=('Calibri Bold', 9), cursor='X_cursor')
-        self.summarizer.place(relx=0.78, rely=0.05, anchor=NE)
+        Label(header_frame, text="Designing An Adaptive Dynamic Approach Applied in Text Summarization",
+              font=('Slussen Mono Black', 15), background='antiquewhite', wraplength=self.screenWidth * 0.45).pack(pady=10)
 
-        self.results = Button(self, text='Results', borderwidth=2, state='disabled', background='antiquewhite',
-                              width=12, height=2, activebackground='antiquewhite4', activeforeground="white",
-                              disabledforeground='bisque2', font=('Calibri Bold', 9), cursor='X_cursor')
-        self.results.place(relx=0.88, rely=0.05, anchor=NE)
+        self.summarizer = Button(header_frame, text='Summarize', borderwidth=2, state='disabled', background='antiquewhite',
+                width=12, height=2, activebackground='antiquewhite4', activeforeground="white",
+                disabledforeground='bisque2', font=('Calibri Bold', 9), cursor='X_cursor', command=self.summarize_text)
+        self.summarizer.pack(side=RIGHT, padx=5)
 
-        aboutButton = Button(self, text='About', borderwidth=2, state='normal', background='antiquewhite',
-                             width=12, height=2, activebackground='antiquewhite4', activeforeground="white",
-                             font=('Calibri Bold', 9), cursor='hand2', command=self.toggle_about)
-        aboutButton.place(relx=0.98, rely=0.05, anchor=NE)
+        Button(header_frame, text='Results', borderwidth=2, state='disabled', background='antiquewhite',
+                width=12, height=2, activebackground='antiquewhite4', activeforeground="white",
+                disabledforeground='bisque2', font=('Calibri Bold', 9), cursor='X_cursor').pack(side=RIGHT, padx=5)
+
+        Button(header_frame, text='About', borderwidth=2, state='normal', background='antiquewhite',
+                width=12, height=2, activebackground='antiquewhite4', activeforeground="white",
+                font=('Calibri Bold', 9), cursor='hand2', command=self.toggle_about).pack(side=RIGHT, padx=5)
 
         self.aboutWindow = Frame(self, background='whitesmoke', bd=5, relief='ridge', pady=15, padx=15)
         Label(self.aboutWindow, background='whitesmoke', text="Designing An Adaptive Dynamic Approach Applied in Text Summarization",
               font=('Times New Roman Bold', 13), wraplength=self.screenWidth * 0.35).pack()
-        Label(self.aboutWindow, background='whitesmoke', text="This is the abstract of the study...",  # Shortened for brevity
-              font=('Times New Roman Normal', 11), wraplength=self.screenWidth * 0.35, justify='left', pady=30).pack()
+        Label(self.aboutWindow, background='whitesmoke', text="This is the abstract of the study...", font=('Times New Roman Normal', 11),
+              wraplength=self.screenWidth * 0.35, justify='left', pady=30).pack()
         self.setup_researchers()
 
     def setup_researchers(self):
@@ -80,58 +103,94 @@ class MainApp(Tk):
 
     def create_column1(self):
         column1 = Frame(self, padx=15, pady=2, borderwidth=2, relief='groove', background='whitesmoke')
-        runningFile = Canvas(column1, borderwidth=2, relief='sunken', width=self.screenWidth * 0.225, height=self.screenHeight * 0.67)
+        column1.grid(row=1, column=0, sticky='nsew')
+
+        runningFile = Canvas(column1, borderwidth=2, relief='sunken')
         runningFileFrame = Frame(runningFile)
-        Label(runningFileFrame, text=self.fileContent, wraplength=self.screenWidth * 0.2, justify='left').pack()
+        self.runningFileLabel = Label(runningFileFrame, text=self.fileContent, wraplength=self.screenWidth * 0.2, justify='left')
+        self.runningFileLabel.pack()
         runningFileFrame.place(anchor=NW, relx=0.05, rely=0.025)
-        runningFile.pack(side='bottom')
+        runningFile.pack(side='bottom', fill=BOTH, expand=True)
 
         insertFile = Button(column1, text="Insert File", width=15, height=2, borderwidth=2, relief='ridge', cursor='hand2', command=self.open_file_dialog)
-        insertFile.pack(side='left')
+        insertFile.pack(side='left', padx=5, pady=5)
         self.fileLabel = Label(column1, text=self.filename, padx=5, background='whitesmoke')
-        self.fileLabel.pack(side='right')
-
-        column1.place(relx=0.02, rely=0.14, anchor=NW)
+        self.fileLabel.pack(side='right', padx=5, pady=5)
 
     def create_column2(self):
         column2 = Frame(self, padx=15, pady=2, borderwidth=2, relief='groove', background='whitesmoke')
-        xstAlgoCanvas = Canvas(column2, borderwidth=2, relief='sunken', width=self.screenWidth * 0.285, height=self.screenHeight * 0.67)
+        column2.grid(row=1, column=1, sticky='nsew')
+
+        xstAlgoCanvas = Canvas(column2, borderwidth=2, relief='sunken')
         xstAlgoFrame = Frame(xstAlgoCanvas)
         Label(xstAlgoFrame, text=self.xstAlgoContent, wraplength=self.screenWidth * 0.25, justify='left').pack()
         xstAlgoFrame.place(anchor=NW, relx=0.05, rely=0.025)
-        xstAlgoCanvas.pack(side='bottom')
-        Label(column2, text='Existing Algorithm', pady=6, font=('Calibri Bold', 15), background='whitesmoke').pack(side='left')
-        column2.place(relx=0.4675, rely=0.14, anchor=N)
+        xstAlgoCanvas.pack(side='bottom', fill=BOTH, expand=True)
+        Label(column2, text='Existing Algorithm', pady=6, font=('Calibri Bold', 15), background='whitesmoke').pack(side='top')
 
     def create_column3(self):
         column3 = Frame(self, padx=15, pady=2, borderwidth=2, relief='groove', background='whitesmoke')
-        newAlgoCanvas = Canvas(column3, borderwidth=2, relief='sunken', width=self.screenWidth * 0.285, height=self.screenHeight * 0.67)
+        column3.grid(row=1, column=2, sticky='nsew')
+
+        newAlgoCanvas = Canvas(column3, borderwidth=2, relief='sunken')
         newAlgoFrame = Frame(newAlgoCanvas)
         Label(newAlgoFrame, text=self.newAlgoContent, wraplength=self.screenWidth * 0.25, justify='left').pack()
         newAlgoFrame.place(anchor=NW, relx=0.05, rely=0.025)
-        newAlgoCanvas.pack(side='bottom')
-        Label(column3, text='New Algorithm', pady=6, font=('Calibri Bold', 15), background='whitesmoke').pack(side='left')
-        column3.place(relx=0.98, rely=0.14, anchor=NE)
+        newAlgoCanvas.pack(side='bottom', fill=BOTH, expand=True)
+        Label(column3, text='New Algorithm', pady=6, font=('Calibri Bold', 15), background='whitesmoke').pack(side='top')
 
     def create_results_window(self):
-        self.resultsWindow = Canvas(self, background='whitesmoke', borderwidth=5, relief='ridge', width=self.screenWidth * 0.4, height=self.screenHeight * 0.6)
-        resultsWindowFrame = Frame(self.resultsWindow)
-        Label(resultsWindowFrame, background='whitesmoke', text="Statistics", font=('Times New Roman Bold', 16)).pack(side='top')
-        Label(resultsWindowFrame, background='whitesmoke', text="Some results will be shown here...").pack(side='bottom')
-        resultsWindowFrame.pack(fill='both', expand=True)
-        self.resultsWindow.place(relx=0.57, rely=0.2, anchor=NW)
+        self.resultsWindow = Frame(self, padx=15, pady=2, borderwidth=2, relief='groove', background='whitesmoke')
+        self.resultsWindow.grid(row=1, column=2, sticky='nsew')
+
+        self.resultsText = Text(self.resultsWindow, wrap='word')
+        self.resultsText.pack(expand=True, fill=BOTH)
+
+    def summarize_text(self):
+        if self.fileContent:
+            summary = self.generate_summary(self.fileContent)
+            self.resultsText.delete(1.0, END)
+            self.resultsText.insert(END, summary)
+
+    def generate_summary(self, text, num_sentences=3):
+        sentences = sent_tokenize(text)
+        words = word_tokenize(text)
+        freq_dist = FreqDist(word.lower() for word in words if word.isalpha())
+
+        sentence_scores = defaultdict(int)
+        for sentence in sentences:
+            for word in word_tokenize(sentence):
+                if word.lower() in freq_dist:
+                    sentence_scores[sentence] += freq_dist[word.lower()]
+
+        summarized_sentences = sorted(sentence_scores, key=sentence_scores.get, reverse=True)[:num_sentences]
+        return ' '.join(summarized_sentences)
 
     def open_file_dialog(self):
-        self.filename = filedialog.askopenfilename()
-        self.fileLabel.config(text=self.filename)
+        file_path = filedialog.askopenfilename(filetypes=[("Word Documents", "*.docx")])
+        if file_path:
+            self.filename = file_path
+            self.fileLabel.config(text=self.filename)
+            self.fileContent = self.read_docx(file_path)
+            self.runningFileLabel.config(text=self.fileContent)
+            self.summarizer.config(state='normal')  # Enable summarize button
+            print("File loaded and summarize button enabled.")
+
+    def read_docx(self, file_path):
+        try:
+            doc = Document(file_path)
+            text = "\n".join(para.text for para in doc.paragraphs)
+            return text
+        except Exception as e:
+            print(f"Error reading docx file: {e}")
+            return ""
 
     def toggle_about(self):
         if self.show:
-            self.aboutWindow.place(relx=0.5, rely=0.5, anchor=CENTER)
-            self.show = False
+            self.aboutWindow.grid(row=1, column=1, sticky='nsew')
         else:
-            self.aboutWindow.place_forget()
-            self.show = True
+            self.aboutWindow.grid_forget()
+        self.show = not self.show
 
 if __name__ == "__main__":
     app = MainApp()
