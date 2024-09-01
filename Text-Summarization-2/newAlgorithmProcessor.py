@@ -1,13 +1,10 @@
-from transformers import BartTokenizer, BartForConditionalGeneration
-import torch  # Ensure you have PyTorch installed
+from nltk.tokenize import sent_tokenize, word_tokenize
+from collections import Counter
+import heapq
 
 class NewAlgorithmProcessor:
     def __init__(self):
-        self.tokenizer = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
-        self.model = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn')
         self.content = ""
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
 
     def set_content(self, content):
         self.content = content
@@ -16,19 +13,28 @@ class NewAlgorithmProcessor:
         if not self.content:
             return "No content available for summarization."
 
-        inputs = self.tokenizer.encode("summarize: " + self.content, return_tensors="pt", max_length=1024, truncation=True).to(self.device)
+        # Tokenize content into sentences
+        sentences = sent_tokenize(self.content)
 
-
-        summary_ids = self.model.generate(
-            inputs,
-            max_length=150,
-            min_length=40,
-            length_penalty=2.0,
-            num_beams=2,  # Reduced beams for faster generation
-            early_stopping=True
-        )
+        # Tokenize content into words and count word frequencies
+        word_frequencies = Counter(word_tokenize(self.content.lower()))
         
-        # Move summary_ids to CPU before decoding
-        summary_ids = summary_ids.cpu()
-        summary = self.tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+        # Normalize frequencies
+        max_frequency = max(word_frequencies.values())
+        for word in word_frequencies.keys():
+            word_frequencies[word] /= max_frequency
+
+        # Score sentences by summing the frequencies of words they contain
+        sentence_scores = {}
+        for sentence in sentences:
+            for word in word_tokenize(sentence.lower()):
+                if word in word_frequencies:
+                    if sentence not in sentence_scores:
+                        sentence_scores[sentence] = word_frequencies[word]
+                    else:
+                        sentence_scores[sentence] += word_frequencies[word]
+
+        # Select the top N sentences as the summary
+        summary_sentences = heapq.nlargest(5, sentence_scores, key=sentence_scores.get)
+        summary = ' '.join(summary_sentences)
         return summary
