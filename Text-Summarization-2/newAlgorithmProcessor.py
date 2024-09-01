@@ -1,40 +1,46 @@
-from nltk.tokenize import sent_tokenize, word_tokenize
+import re
 from collections import Counter
 import heapq
 
 class NewAlgorithmProcessor:
     def __init__(self):
         self.content = ""
+        self.word_frequencies_cache = {}
 
     def set_content(self, content):
         self.content = content
+        self.word_frequencies_cache = {}  # Reset cache
 
     def generate_summary(self):
         if not self.content:
             return "No content available for summarization."
 
-        # Tokenize content into sentences
-        sentences = sent_tokenize(self.content)
+        sentences = self.tokenize_sentences(self.content)
+        word_frequencies = self.get_word_frequencies()
+        sentence_scores = self.score_sentences(sentences, word_frequencies)
+        summary_sentences = self.select_top_sentences(sentences, sentence_scores)
+        return ' '.join(summary_sentences)
 
-        # Tokenize content into words and count word frequencies
-        word_frequencies = Counter(word_tokenize(self.content.lower()))
-        
-        # Normalize frequencies
-        max_frequency = max(word_frequencies.values())
-        for word in word_frequencies.keys():
-            word_frequencies[word] /= max_frequency
+    def tokenize_sentences(self, text):
+        sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
+        return [sentence.strip() for sentence in sentences if sentence.strip()]
 
-        # Score sentences by summing the frequencies of words they contain
+    def get_word_frequencies(self):
+        if not self.word_frequencies_cache:
+            word_frequencies = Counter(re.findall(r'\w+', self.content.lower()))
+            max_frequency = max(word_frequencies.values(), default=1)
+            self.word_frequencies_cache = {word: freq / max_frequency for word, freq in word_frequencies.items()}
+        return self.word_frequencies_cache
+
+    def score_sentences(self, sentences, word_frequencies):
         sentence_scores = {}
         for sentence in sentences:
-            for word in word_tokenize(sentence.lower()):
-                if word in word_frequencies:
-                    if sentence not in sentence_scores:
-                        sentence_scores[sentence] = word_frequencies[word]
-                    else:
-                        sentence_scores[sentence] += word_frequencies[word]
+            words = re.findall(r'\w+', sentence.lower())
+            sentence_scores[sentence] = sum(word_frequencies.get(word, 0) for word in words)
+        return sentence_scores
 
-        # Select the top N sentences as the summary
-        summary_sentences = heapq.nlargest(5, sentence_scores, key=sentence_scores.get)
-        summary = ' '.join(summary_sentences)
-        return summary
+    def select_top_sentences(self, sentences, sentence_scores):
+        top_n = 5
+        ranked_sentences = heapq.nlargest(top_n, sentence_scores.items(), key=lambda x: x[1])
+        ranked_sentences.sort(key=lambda x: sentences.index(x[0]))  # Maintain original order
+        return [sentence for sentence, _ in ranked_sentences]
