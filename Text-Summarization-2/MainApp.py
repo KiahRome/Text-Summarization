@@ -8,7 +8,7 @@ class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Text Summarization Application")
-        self.geometry("1078x768")
+        self.geometry("1440x768")
 
         # Initialize processors
         self.text_processor = TextProcessor()
