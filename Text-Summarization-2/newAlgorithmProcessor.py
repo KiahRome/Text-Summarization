@@ -56,11 +56,18 @@ class NewAlgorithmProcessor:
         return [sentence.strip() for sentence in sentences if sentence.strip()]
 
     def _normalize_text(self, text):
+        # Specific headings to remove
+        headings = r'\b(Abstract|Keywords|Introduction|Literature Review|Methodology|Results|Discussion|Conclusion)\b'
+        text = re.sub(headings, '', text, flags=re.IGNORECASE)
+        # Remove section numbers
+        text = re.sub(r'\b\d+(\.\d+)?\b\s*', '', text)
+        # Remove bullet points and numbered lists
+        text = re.sub(r'(\u2022|\u25AA|\u25CF)\s*', '', text)
+        # Consolidate multiple new lines and spaces
         text = re.sub(r'\n+', '\n', text)
         text = re.sub(r'\s+', ' ', text).strip()
-        text = re.sub(r'(\d+\.\s)', r'\n\1', text)  # Handle numbered lists
-        text = re.sub(r'(\u2022|\u25AA|\u25CF)\s', r'\n- ', text)  # Handle bullet points
-        text = re.sub(r'[^a-zA-Z0-9\s\.,!?]', '', text)  # Remove unwanted characters
+        # Remove unwanted characters but keep essential content
+        text = re.sub(r'[^\w\s.,!?-]', '', text)
         return text
 
     def get_word_frequencies(self):
