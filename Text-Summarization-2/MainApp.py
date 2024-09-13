@@ -1,5 +1,4 @@
 import tkinter as tk
-from file_loader import FileLoader
 from text_processor import TextProcessor
 from newAlgorithmProcessor import NewAlgorithmProcessor
 from userInterface import UIComponent
