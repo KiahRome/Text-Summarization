@@ -13,22 +13,38 @@ class NewAlgorithmProcessor:
         self.word_frequencies_cache = {}  # Reset cache
         self.sentence_scores_cache = {}  # Reset cache
 
-    def generate_summary(self):
+    def generate_summary(self, text_type="article"):
         if not self.content:
             return "No content available for summarization."
 
-        # Segment long texts into chunks if necessary
-        chunks = self.segment_text(self.content)
-        summary_chunks = [self._generate_chunk_summary(chunk) for chunk in chunks]
-        full_summary = ' '.join(summary_chunks)
-        return full_summary
+        # Choose the summarization strategy based on the text type
+        if text_type == "short_story":
+            chunks = self.segment_text_short_story(self.content)
+        elif text_type == "article":
+            chunks = self.segment_text_article(self.content)
+        else:
+            return "Invalid text type specified."
 
-    def segment_text(self, text, max_chunk_size=5000):
+        full_summary = []
+        for chunk in chunks:
+            chunk_summary = self._generate_chunk_summary(chunk)
+            full_summary.append(chunk_summary)
+
+        return self._shorten_summary(' '.join(full_summary).strip(), text_type)
+
+    def segment_text_short_story(self, text, max_chunk_size=2000):
         sentences = self.tokenize_sentences(text)
+        return self._segment_text(sentences, max_chunk_size)
+
+    def segment_text_article(self, text, max_chunk_size=4000):
+        sentences = self.tokenize_sentences(text)
+        return self._segment_text(sentences, max_chunk_size)
+
+    def _segment_text(self, sentences, max_chunk_size):
         chunks = []
         current_chunk = []
-
         chunk_size = 0
+
         for sentence in sentences:
             sentence_size = len(sentence)
             if chunk_size + sentence_size > max_chunk_size:
@@ -56,17 +72,12 @@ class NewAlgorithmProcessor:
         return [sentence.strip() for sentence in sentences if sentence.strip()]
 
     def _normalize_text(self, text):
-        # Specific headings to remove
         headings = r'\b(Abstract|Keywords|Introduction|Literature Review|Methodology|Results|Discussion|Conclusion)\b'
         text = re.sub(headings, '', text, flags=re.IGNORECASE)
-        # Remove section numbers
         text = re.sub(r'\b\d+(\.\d+)?\b\s*', '', text)
-        # Remove bullet points and numbered lists
         text = re.sub(r'(\u2022|\u25AA|\u25CF)\s*', '', text)
-        # Consolidate multiple new lines and spaces
         text = re.sub(r'\n+', '\n', text)
         text = re.sub(r'\s+', ' ', text).strip()
-        # Remove unwanted characters but keep essential content
         text = re.sub(r'[^\w\s.,!?-]', '', text)
         return text
 
@@ -88,26 +99,23 @@ class NewAlgorithmProcessor:
             sentence_scores[sentence] = score
             max_score = max(max_score, score)
         
-        # Adjusted threshold for more relevant sentences
-        threshold = 0.15 * max_score
+        threshold = 0.2 * max_score if len(sentences) > 10 else 0.3 * max_score
+        
         filtered_scores = {sentence: score for sentence, score in sentence_scores.items() if score > threshold}
-
-        # Enhance representation from different sections
-        total_sentences = len(sentences)
-        if total_sentences > 5:
-            min_sentences = max(1, total_sentences // 6)
-            for idx, sentence in enumerate(sentences):
-                if idx < min_sentences or idx > total_sentences - min_sentences:
-                    filtered_scores[sentence] = filtered_scores.get(sentence, 0) + 0.2
 
         return filtered_scores
 
     def select_top_sentences(self, sentences, sentence_scores):
-        top_n = min(10, len(sentences))  # Increase the number of top sentences
+        top_n = min(5, len(sentences)) if len(sentences) <= 10 else min(8, len(sentences))
         ranked_sentences = heapq.nlargest(top_n, sentence_scores.items(), key=lambda x: x[1])
-        
-        # Ensure the selected sentences maintain the original order
         best_sentences = [sentence for sentence, _ in ranked_sentences]
         best_sentences.sort(key=lambda sentence: sentences.index(sentence))
-        
         return best_sentences
+
+    def _shorten_summary(self, summary, text_type):
+        words = summary.split()
+        if text_type == "short_story":
+            return ' '.join(words[:150])  # Limit to a specific word count for short stories
+        elif text_type == "article":
+            return ' '.join(words[:250])  # Limit to a specific word count for articles
+        return summary
